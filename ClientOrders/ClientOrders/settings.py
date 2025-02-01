@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'Authorization',
     'mozilla_django_oidc',
+   
 ]
 
 MIDDLEWARE = [
@@ -55,7 +56,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+     'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'ClientOrders.urls'
@@ -121,6 +122,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 
 WSGI_APPLICATION = 'ClientOrders.wsgi.application'
+
+
 
 
 # Database
