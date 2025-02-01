@@ -11,7 +11,7 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ClientOrders.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ClientOrders.ClientOrders.settings')
 
 application = get_wsgi_application()
 from whitenoise import WhiteNoise
