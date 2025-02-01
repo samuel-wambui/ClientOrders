@@ -1,0 +1,53 @@
+name: Deploy to Heroku
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensures full clone from the start
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+          export PATH="/usr/local/bin:$PATH"
+          heroku --version
+
+      - name: Authenticate with Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          echo $HEROKU_API_KEY | heroku auth:token
+
+      - name: Set up Git for Heroku Deployment
+        run: |
+          git remote remove heroku || true
+          git remote add heroku https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/client-orders.git
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Ensure Full Git History
+        run: |
+          if [ -f .git/shallow ]; then
+            echo "Repository is shallow. Running git fetch --unshallow..."
+            git fetch --unshallow
+          else
+            echo "Repository is already complete. Skipping unshallowing."
+          fi
+
+      - name: Deploy to Heroku
+        run: |
+          git push heroku main --force
