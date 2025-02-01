@@ -41,9 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'ClientOrders.orders',
+    'orders',
     'rest_framework',
-    'ClientOrders.Authorization',
+    'Authorization',
     'mozilla_django_oidc',
    
 ]
