@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'orders',
+    'core',
     'rest_framework',
     'Authorization',
     'mozilla_django_oidc',
@@ -92,14 +93,17 @@ OIDC_RP_SIGN_ALGO = "RS256"
 OIDC_OP_JWKS_ENDPOINT = "https://www.googleapis.com/oauth2/v3/certs"  # Required for validating tokens
 
 # After a successful login, the user is redirected to this URL.
-LOGIN_REDIRECT_URL = '/api/orders/'
+# LOGIN_REDIRECT_URL = '/api/orders/'
 
 # After logout, the user is redirected to this URL.
 LOGOUT_REDIRECT_URL = "/"
 
 # OIDC callback endpoint – must match the one registered in the Google Developer Console.
 OIDC_CALLBACK_URL = "/oidc/callback/"
-LOGIN_URL = '/login/'
+LOGIN_URL = '/oidc/authenticate/'
+# settings.py
+
+LOGIN_REDIRECT_URL = '/dashboard/'
 
 print(os.environ.get("OIDC_CLIENT_ID"))
 print(os.environ.get("OIDC_CLIENT_SECRET"))
