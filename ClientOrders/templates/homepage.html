@@ -1,0 +1,12 @@
+<!-- templates/homepage.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome to Client Orders</title>
+</head>
+<body>
+    <h1>Welcome to Client Orders!</h1>
+    <p>Please <a href="{% url 'login' %}?next={{ request.path }}">log in</a> to continue.</p>
+</body>
+</html>

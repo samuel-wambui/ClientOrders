@@ -4,6 +4,9 @@ from orders.models import Customer, Order
 from orders.serializable import CustomerSerializer, OrderSerializer
 from orders.sms_util import send_sms  # Ensure correct import path for send_sms
 
+
+
+
 def format_phone_number(phone):
     """
     Format the phone number as follows:

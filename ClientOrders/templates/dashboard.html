@@ -1,0 +1,19 @@
+<!-- templates/dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Dashboard</h1>
+    <p>Welcome, {{ request.user.username }}!</p>
+    <h2>Available API Endpoints</h2>
+    <ul>
+        {% for name, url in api_endpoints.items %}
+        <li><strong>{{ name }}</strong>: <a href="{{ url }}">{{ url }}</a></li>
+        {% endfor %}
+    </ul>
+    <p><a href="{% url 'logout' %}">Log out</a></p>
+</body>
+</html>

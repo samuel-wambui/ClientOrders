@@ -14,17 +14,30 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-
 from django.contrib import admin
-from mozilla_django_oidc.views import OIDCAuthenticationRequestView, OIDCLogoutView
 from django.urls import path, include
+from mozilla_django_oidc.views import OIDCAuthenticationRequestView, OIDCLogoutView
+
+# Import your custom views for homepage and dashboard.
+# Make sure you have implemented these views in, for example, core/views.py.
+from core.views import homepage, dashboard
 
 urlpatterns = [
+    # Homepage: Shows a login link if the user is not authenticated.
+    path('', homepage, name='homepage'),
+    
+    # Dashboard: A protected view listing API endpoints (or other post-login info).
+    path('dashboard/', dashboard, name='dashboard'),
+    
+    # Admin interface.
     path('admin/', admin.site.urls),
-    path('api/', include('orders.urls')),
-    path('api/', include('Authorization.urls')),
-        # Includes the URLs from the `orders` app
-    path('oidc/', include('mozilla_django_oidc.urls')),  # Include OIDC URLs
+    
+    # API endpoints: Adjust base paths as needed.
+    path('api/orders/', include('orders.urls')),          # e.g., /api/orders/
+    path('api/authorization/', include('Authorization.urls')),  # e.g., /api/authorization/
+    
+    # OIDC endpoints for authentication.
+    path('oidc/', include('mozilla_django_oidc.urls')),
     path('oidc/authenticate/', OIDCAuthenticationRequestView.as_view(), name='oidc_authenticate'),
     path('oidc/logout/', OIDCLogoutView.as_view(), name='oidc_logout'),
 ]
