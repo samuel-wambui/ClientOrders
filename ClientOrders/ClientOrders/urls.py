@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.contrib.auth import views as auth_views  # Import Django's auth views
 from mozilla_django_oidc.views import OIDCAuthenticationRequestView, OIDCLogoutView
 
 # Import your custom views for homepage and dashboard.
@@ -25,7 +24,6 @@ urlpatterns = [
     path('oidc/authenticate/', OIDCAuthenticationRequestView.as_view(), name='oidc_authenticate'),
     path('oidc/logout/', OIDCLogoutView.as_view(), name='oidc_logout'),
 
-    # New URL pattern for "login" using Django's built-in LoginView.
-    # This will render the template at templates/login.html.
-    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+    # Updated URL pattern for "login" that redirects to your OIDC authenticate view.
+    path('login/', OIDCAuthenticationRequestView.as_view(), name='login'),
 ]
