@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'orders',
-    'core',
     'rest_framework',
     'Authorization',
     'mozilla_django_oidc',
