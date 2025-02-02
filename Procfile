@@ -1,1 +1,1 @@
-web: gunicorn ClientOrders.wsgi:application
+web: gunicorn ClientOrders.wsgi --log-file -
