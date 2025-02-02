@@ -4,8 +4,18 @@ from orders.models import Customer, Order
 from orders.serializable import CustomerSerializer, OrderSerializer
 from orders.sms_util import send_sms  # Ensure correct import path for send_sms
 
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 
-
+@login_required
+def api_dashboard(request):
+    api_endpoints = {
+        'Orders API': '/api/orders/',
+        'Authorization API': '/api/authorization/',
+        'OIDC Login': '/oidc/authenticate/',
+        'OIDC Logout': '/oidc/logout/',
+    }
+    return render(request, 'dashboard.html', {'api_endpoints': api_endpoints})
 
 def format_phone_number(phone):
     """
