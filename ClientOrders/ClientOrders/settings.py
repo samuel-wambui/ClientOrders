@@ -99,7 +99,7 @@ LOGOUT_REDIRECT_URL = "/"
 
 # OIDC callback endpoint – must match the one registered in the Google Developer Console.
 OIDC_CALLBACK_URL = "/oidc/callback/"
-LOGIN_URL = '/oidc/authenticate/'
+LOGIN_URL = 'login'
 # settings.py
 
 LOGIN_REDIRECT_URL = '/dashboard/'
