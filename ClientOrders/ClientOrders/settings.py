@@ -99,7 +99,7 @@ LOGOUT_REDIRECT_URL = "/"
 
 # OIDC callback endpoint – must match the one registered in the Google Developer Console.
 OIDC_CALLBACK_URL = "/oidc/callback/"
-
+LOGIN_URL = '/login/'
 
 print(os.environ.get("OIDC_CLIENT_ID"))
 print(os.environ.get("OIDC_CLIENT_SECRET"))
