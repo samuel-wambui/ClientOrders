@@ -13,9 +13,7 @@ from django.contrib.auth.decorators import login_required
 def api_dashboard(request):
     api_endpoints = {
         'Orders API': '/api/orders/',
-        'Authorization API': '/api/authorization/',
-        'OIDC Login': '/oidc/authenticate/',
-        'OIDC Logout': '/oidc/logout/',
+    
     }
     return render(request, 'dashboard.html', {'api_endpoints': api_endpoints})
 
