@@ -95,7 +95,7 @@ OIDC_OP_JWKS_ENDPOINT = "https://www.googleapis.com/oauth2/v3/certs"  # Required
 # LOGIN_REDIRECT_URL = '/api/orders/'
 
 # After logout, the user is redirected to this URL.
-LOGOUT_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = ""
 
 # OIDC callback endpoint – must match the one registered in the Google Developer Console.
 OIDC_CALLBACK_URL = "/oidc/callback/"
