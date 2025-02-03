@@ -26,8 +26,10 @@ jobs:
           pip install -r requirements.txt
           pip install coverage
 
-      - name: Run Tests with Coverage for Authorization and orders
+      - name: Run Tests with Coverage for Authorization and Orders
         run: |
+          # Change to the correct directory
+          cd ClientOrders
           # Run tests for both apps and measure coverage.
           coverage run --source=Authorization,orders manage.py test
           # Display a report and fail if overall coverage is below 80%.
