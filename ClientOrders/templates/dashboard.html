@@ -6,7 +6,7 @@
     <title>API Dashboard</title>
 </head>
 <body>
-    <h1>Welcome, {{ request.user.username }}</h1>
+    <h1>Welcome, {{ request.user.email }}</h1>
     <p>Here are your available API endpoints:</p>
     <ul>
         {% for name, url in api_endpoints.items %}
