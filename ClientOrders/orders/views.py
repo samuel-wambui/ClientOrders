@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from orders.models import Customer, Order
 from orders.serializable import CustomerSerializer, OrderSerializer
 from orders.sms_util import send_sms  # Ensure correct import path for send_sms
+from rest_framework.permissions import IsAuthenticated
+
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -34,14 +36,15 @@ def format_phone_number(phone):
         return '+254' + phone[1:]
     else:
         return '+254' + phone
-
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
+    permission_classes = [IsAuthenticated]  # Only authenticated users can access
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]  # Only authenticated users can access
 
     def create(self, request, *args, **kwargs):
         """
