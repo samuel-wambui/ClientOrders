@@ -1,61 +1,151 @@
+# Authorization/tests.py
+
+import json
 from django.test import TestCase, RequestFactory
-from django.contrib.auth import get_user_model
-from unittest.mock import patch
-from Authorization.views import jwt_login_view, upgrade_user_to_admin  # Import your views
-from django.urls import reverse
 from django.http import Http404
+from unittest.mock import patch
+from jwt import PyJWTError
+from django.contrib.auth import get_user_model
+
+# Import the Role model and views from your Authorization app.
 from Authorization.models import Role
+from Authorization.views import upgrade_user_to_admin, jwt_login_view
 
-class JWTLoginTest(TestCase):
+User = get_user_model()
+
+
+class UpgradeUserToAdminTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
-        self.User = get_user_model()
+        self.email = "user@example.com"
+        # Create a user using the custom user model.
+        self.user = User.objects.create(
+            email=self.email,
+            is_staff=False,
+        )
+        # The signal should have automatically added the default "user" role.
+        # If you want to test upgrade functionality, you can start with that.
+        self.user.roles.clear()  # Clear roles to simulate a user without admin privileges.
+        default_role, _ = Role.objects.get_or_create(name='user')
+        # You may also choose to re-add the default role if needed, e.g.:
+        self.user.roles.add(default_role)
 
-    @patch('Authorization.views.decode_jwt_and_get_email')  # Mock the JWT decoder
-    def test_user_registration_and_role_assignment(self, mock_decode_jwt):
-        mock_email = "testuser@example.com"
-        mock_decode_jwt.return_value = mock_email  # Simulate a decoded email
+    def test_upgrade_user_to_admin_success(self):
+        """
+        Test that a non-admin user is upgraded: the "admin" role is added,
+        the user becomes staff, and a success message is returned.
+        """
+        request = self.factory.get(f"/upgrade/{self.email}")
+        response = upgrade_user_to_admin(request, self.email)
+        response_data = json.loads(response.content.decode())
 
-        request = self.factory.post("/jwt-login/", HTTP_AUTHORIZATION="Bearer mocktoken")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_data, {"message": f"User {self.email} upgraded to admin."})
+
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_staff)
+        admin_role = Role.objects.get(name="admin")
+        self.assertIn(admin_role, self.user.roles.all())
+
+    def test_upgrade_user_already_admin(self):
+        """
+        Test that if the user already has the admin role, a message indicating so is returned.
+        """
+        admin_role, _ = Role.objects.get_or_create(name="admin")
+        self.user.roles.add(admin_role)
+        self.user.is_staff = True
+        self.user.save()
+
+        request = self.factory.get(f"/upgrade/{self.email}")
+        response = upgrade_user_to_admin(request, self.email)
+        response_data = json.loads(response.content.decode())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_data, {"message": f"User {self.email} is already an admin."})
+
+    def test_upgrade_nonexistent_user(self):
+        """
+        Test that attempting to upgrade a non-existent user raises a 404.
+        """
+        non_existent_email = "doesnotexist@example.com"
+        request = self.factory.get(f"/upgrade/{non_existent_email}")
+        with self.assertRaises(Http404):
+            upgrade_user_to_admin(request, non_existent_email)
+
+
+class JWTLoginViewTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    @patch('Authorization.views.decode_jwt_and_get_email')
+    def test_jwt_login_view_success_new_user(self, mock_decode):
+        """
+        Test that when a valid JWT is provided and the user does not exist,
+        a new user is created, assigned the default role, and a success message is returned.
+        """
+        test_email = "newuser@example.com"
+        mock_decode.return_value = test_email
+
+        request = self.factory.get("/jwt-login")
         response = jwt_login_view(request)
+        response_data = json.loads(response.content.decode())
 
-        self.assertEqual(response.status_code, 200)  # Check if request succeeds
-        self.assertTrue(self.User.objects.filter(email=mock_email).exists())  # Check if user is created
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response_data, {"message": f"User {test_email} authenticated and registered."}
+        )
 
+        # Verify that the user was created and has the default "user" role.
+        user = User.objects.get(email=test_email)
+        default_role = Role.objects.get(name="user")
+        self.assertIn(default_role, user.roles.all())
 
-class UpgradeUserToAdminTest(TestCase):
-    def setUp(self):
-        self.factory = RequestFactory()
-        self.User = get_user_model()
-        self.user = self.User.objects.create(email="testuser@example.com")
+    @patch('Authorization.views.decode_jwt_and_get_email')
+    def test_jwt_login_view_success_existing_user(self, mock_decode):
+        """
+        Test that when a valid JWT is provided and the user already exists,
+        the view returns a success message.
+        """
+        test_email = "existinguser@example.com"
+        User.objects.create(email=test_email)
+        mock_decode.return_value = test_email
 
+        request = self.factory.get("/jwt-login")
+        response = jwt_login_view(request)
+        response_data = json.loads(response.content.decode())
 
-def test_upgrade_user_to_admin_success(self):
-    """Test upgrading a user to admin successfully."""
-    admin_role, _ = Role.objects.get_or_create(name="admin")  # Ensure role exists
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response_data, {"message": f"User {test_email} authenticated and registered."}
+        )
 
-    request = self.factory.post(reverse('upgrade_user_to_admin', args=[self.user.email]))  # Simulate request
-    response = upgrade_user_to_admin(request, self.user.email)
+    @patch('Authorization.views.decode_jwt_and_get_email')
+    def test_jwt_login_view_jwt_error(self, mock_decode):
+        """
+        Test that if decode_jwt_and_get_email raises a PyJWTError,
+        the view returns a 401 with an appropriate error message.
+        """
+        error_message = "Invalid token"
+        mock_decode.side_effect = PyJWTError(error_message)
 
-    response_data = response.json()  # Extract JSON data
-    self.assertEqual(response.status_code, 200)
-    self.assertIn("upgraded to admin", response_data["message"])
-    self.assertTrue(self.user.roles.filter(name="admin").exists())  # Check role assigned
-    self.user.refresh_from_db()
-    self.assertTrue(self.user.is_staff)  # Ensure is_staff is True
+        request = self.factory.get("/jwt-login")
+        response = jwt_login_view(request)
+        response_data = json.loads(response.content.decode())
 
-def test_user_already_admin(self):
-    """Test that if a user is already an admin, no changes occur."""
-    admin_role, _ = Role.objects.get_or_create(name="admin")
-    self.user.roles.add(admin_role)  # Assign admin role before test
-    self.user.save()
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response_data, {"error": error_message})
 
-    request = self.factory.post(reverse('upgrade_user_to_admin', args=[self.user.email]))
-    response = upgrade_user_to_admin(request, self.user.email)
+    @patch('Authorization.views.decode_jwt_and_get_email')
+    def test_jwt_login_view_generic_exception(self, mock_decode):
+        """
+        Test that if decode_jwt_and_get_email raises a generic Exception,
+        the view returns a 500 with a generic error message.
+        """
+        mock_decode.side_effect = Exception("Unexpected error")
 
-    response_data = response.json()  # Extract JSON data
-    self.assertEqual(response.status_code, 200)
-    self.assertIn("already an admin", response_data["message"])
-from django.test import TestCase
+        request = self.factory.get("/jwt-login")
+        response = jwt_login_view(request)
+        response_data = json.loads(response.content.decode())
 
-# Create your tests here.
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response_data, {"error": "Internal server error"})

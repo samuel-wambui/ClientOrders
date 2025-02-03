@@ -103,6 +103,7 @@ LOGIN_URL = '/oidc/authenticate/'
 # settings.py
 
 LOGIN_REDIRECT_URL = '/dashboard/'
+AUTH_USER_MODEL = 'Authorization.User'
 
 print(os.environ.get("OIDC_CLIENT_ID"))
 print(os.environ.get("OIDC_CLIENT_SECRET"))

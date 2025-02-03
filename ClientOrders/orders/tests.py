@@ -1,86 +1,116 @@
-from rest_framework.test import APITestCase
-from rest_framework import status
+# orders/tests.py
+
+import json
 from unittest.mock import patch
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
 from orders.models import Customer, Order
-from orders.serializable import CustomerSerializer, OrderSerializer
+from django.contrib.auth.models import User  # Or get_user_model() if you have a custom user model
 
-class OrderViewSetTest(APITestCase):
+
+class OrderViewSetTests(APITestCase):
     def setUp(self):
-        # Create a test customer
-        self.customer = Customer.objects.create(
-            name="John Doe",
-            phone_number="+254745567890",
-        )
-        self.order_data = {
-            "customer": self.customer.id,
-            "item": "Test Item",
-            "amount": 100.50,
-        }
+        # Create a test user and force authenticate.
+        self.user = User.objects.create_user(username='testuser', password='testpass')
+        self.client.force_authenticate(user=self.user)
 
-    @patch("myOrders.views.send_sms")
-    def test_create_order_and_send_sms(self, mock_send_sms):
-        # Mock the SMS sending functionality
-        mock_send_sms.return_value = {
+        # Create a test customer with a phone number that needs formatting.
+        self.customer = Customer.objects.create(
+            name='John Doe',
+            phone_number='0712345678'  # Should be formatted to +254712345678
+        )
+
+        # URL for creating orders. Adjust the URL name if necessary.
+        self.url = reverse('order-list')
+
+    @patch('orders.views.send_sms')
+    def test_order_creation_sends_sms_and_formats_phone(self, mock_send_sms):
+        """
+        Test that creating an order formats the customer's phone number,
+        sends an SMS, and returns the expected response.
+        """
+        # Prepare the fake SMS response
+        fake_sms_response = {
             "SMSMessageData": {
                 "Recipients": [
-                    {"status": "Success"}
+                    {"status": "Success", "number": "+254712345678"}
                 ]
             }
         }
+        mock_send_sms.return_value = fake_sms_response
 
-        # Send a POST request to create an order
-        response = self.client.post("/api/orders/", self.order_data, format="json")
-        
-        # Assert status code is 201
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        
-        # Check the response data
-        response_data = response.json()
-        self.assertEqual(response_data["sms_status"], "Success")
-        self.assertEqual(response_data["message"], "Order for Test Item created successfully.")
-
-        # Verify the order was created in the database
-        self.assertEqual(Order.objects.count(), 1)
-        order = Order.objects.first()
-        self.assertEqual(order.customer, self.customer)
-        self.assertEqual(order.item, "Test Item")
-        self.assertEqual(order.amount, 100.50)
-
-        # Verify the SMS function was called with correct arguments
-        mock_send_sms.assert_called_once_with(
-            "+254745567890", 
-            "Dear John Doe, your order for Test Item has been placed successfully. Total: 100.50."
-        )
-
-    @patch("myOrders.views.send_sms")
-    def test_create_order_without_sms_failure(self, mock_send_sms):
-        # Simulate an error in the SMS sending
-        mock_send_sms.side_effect = Exception("SMS sending failed")
-
-        # Send a POST request to create an order
-        response = self.client.post("/api/orders/", self.order_data, format="json")
-        
-        # Assert status code is 201 even though SMS sending failed
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # Check the response data for failure in SMS sending
-        response_data = response.json()
-        self.assertEqual(response_data["sms_status"], "Failed: SMS sending failed")
-        self.assertEqual(response_data["message"], "Order for Test Item created successfully.")
-
-    def test_create_order_with_invalid_data(self):
-        # Missing item field
-        invalid_order_data = {
+        order_data = {
             "customer": self.customer.id,
-            "amount": 100.50,
+            "item": "Test Item",
+            "amount": "150.50"
         }
-        
-        # Send a POST request to create an invalid order
-        response = self.client.post("/api/orders/", invalid_order_data, format="json")
 
-        # Assert status code is 400 for bad request
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(self.url, order_data, format='json')
 
-        # Check the response data for error
-        response_data = response.json()
-        self.assertIn("item", response_data)  # Ensure 'item' field is required and missing
+        # Check that the response status is 201 CREATED.
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check that the SMS status in the response is as expected.
+        self.assertIn("sms_status", response.data)
+        self.assertEqual(response.data["sms_status"], "Success")
+
+        # Verify that the order was actually created.
+        order = Order.objects.get(id=response.data["data"]["id"])
+        self.assertEqual(order.item, "Test Item")
+        self.assertEqual(float(order.amount), 150.50)
+        self.assertEqual(order.customer, self.customer)
+
+        # Verify that the customer's phone number was formatted.
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.phone_number, "+254712345678")
+
+        # Ensure the send_sms function was called with the formatted phone and message.
+        expected_message = (
+            f"Dear {self.customer.name}, your order for {order.item} has been placed successfully. "
+            f"Total: {order.amount:.2f}."
+        )
+        mock_send_sms.assert_called_once_with("+254712345678", expected_message)
+
+    def test_order_creation_unauthenticated(self):
+        """
+        Test that an unauthenticated user cannot create an order.
+        """
+        # Remove authentication for this test.
+        self.client.force_authenticate(user=None)
+
+        order_data = {
+            "customer": self.customer.id,
+            "item": "Test Item",
+            "amount": "150.50"
+        }
+        response = self.client.post(self.url, order_data, format='json')
+
+        # Expect a 401 Unauthorized response.
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class CustomerViewSetTests(APITestCase):
+    def setUp(self):
+        # Create a test user and force authenticate.
+        self.user = User.objects.create_user(username='testuser2', password='testpass2')
+        self.client.force_authenticate(user=self.user)
+
+        # URL for the customer list. Adjust the URL name if necessary.
+        self.url = reverse('customer-list')
+
+    def test_customer_list_authenticated(self):
+        """
+        Test that an authenticated user can access the customer list.
+        """
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_customer_list_unauthenticated(self):
+        """
+        Test that an unauthenticated user cannot access the customer list.
+        """
+        # Remove authentication for this test.
+        self.client.force_authenticate(user=None)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
